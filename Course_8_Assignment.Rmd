@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### **Synopsis**
 
-Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify *how well* they do it.
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These devices are part of the "quantified self movement" - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify **how well** they do it.
 
 In this project, I shall investigate activity tracker data from six male participants aged between 20 and 28 years, with limited weightlifting experience. These participants were asked to perform one set of ten repetitions of the Unilateral Dumbbell Biceps Curl using a 1.25 kg dumbbell in five different fashions, comprising the correct technique and four common technique errors as follows:
 
@@ -49,7 +49,7 @@ The following block of R code shall:
         library(caret)
         library(randomForest)
 
-# Load required software
+# Load required data
         training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
         testing <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
         
