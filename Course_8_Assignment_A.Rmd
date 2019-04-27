@@ -1,0 +1,178 @@
+---
+title: "Predicting weightlifting technique using data from wearable activity tracking devices"
+author: "Steve Scicluna"
+date: "27 April 2019"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### **Synopsis**
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit, it is now possible to collect a large amount of data about personal activity relatively inexpensively. These devices are part of the "quantified self movement" - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify **how well** they do it.
+
+In this project, I shall investigate activity tracker data from six male participants aged between 20 and 28 years, with limited weightlifting experience. These participants were asked to perform one set of ten repetitions of the Unilateral Dumbbell Biceps Curl using a 1.25 kg dumbbell in five different fashions, comprising the correct technique and four common technique errors as follows:
+
+1. exactly according to the specification (Class A)
+2. throwing the elbows to the front (Class B)
+3. lifting the dumbbell only halfway (Class C)
+4. lowering the dumbbell only halfway (Class D)
+5. throwing the hips to the front (Class E).
+
+This data was sourced from Velloso, E., Bulling, A., Gellersen, H., Ugulino, W., and Fuks, H. **Qualitative Activity Recognition of Weight Lifting Exercises**, *Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13)*, Stuttgart, Germany: ACM SIGCHI, 2013. (http://groupware.les.inf.puc-rio.br/har#wle_paper_section)
+
+I shall undertake three types of data analysis to investigate the degree of accuracy with which predictor variables can predict whether a Unilateral Dumbbell Biceps Curl is being performed correctly, and if not, which common error is being made. These are:
+
+1. Random Forest
+2. Decision Trees
+3. Generalised Boosting Model
+
+The most accurate of these prediction models shall be used to predict whether a Unilateral Dumbbell Biceps Curl is being performed correctly, and if not, which common error is being made, using the test dataset.
+
+### **Load software and data**
+
+The following block of R code shall:
+
+1. load a series of R packages
+2. download the activity tracker data in the form of two .csv files (training and testing) from a web address and read the data into R
+3. partition the training dataset into a training dataset (70%) and a validation dataset (30%)
+4. remove variables that have near zero variability, are mostly blank or NA, and have no predictive value (e.g. identification numbers, timestamps etc.)
+
+```{r load and explore data}
+
+# Load required software packages.
+        library(rpart)
+        library(caret)
+        library(randomForest)
+        library(gbm)
+
+# Load required data
+        training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+        testing <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+        
+# Partition training dataset into a 70:30 training:validation dataset
+        inTrain  <- createDataPartition(training$classe, p = 0.7, list = FALSE)
+        trainset <- training[inTrain, ]
+        validset <- training[-inTrain, ]
+
+# Remove variables with near zero variability i.e. poor predictors
+        nzv <- nearZeroVar(trainset)
+        trainset <- trainset[, -nzv]
+        validset <- validset[, -nzv]
+     
+# Remove mostly blank or NA variables
+        mostNA <- sapply(trainset, function(x) mean(is.na(x))) > 0.90
+        trainset <- trainset[, mostNA == FALSE]
+        validset <- validset[, mostNA == FALSE]
+        
+# Remove first six columns - identification, timestamp etc.
+        trainset <- trainset[, -(1:6)]
+        validset <- validset[, -(1:6)]
+        
+# Check dataset dimensions
+        dim(trainset)
+        dim(validset)       
+```
+
+###**Prediction models**
+
+This section shall compare the **Random Forest**, **Decision Tree**, and **Generalised Boosting** prediction models using the same training and validation datasets.
+
+####**Random Forest**
+
+```{r random forest}
+
+# Random Forest model
+        rfmodel <- randomForest(classe ~ ., data = trainset, ntree = 500)
+        rfmodel
+
+# Predict against validation dataset
+        rfpredict <- predict(rfmodel, validset, type = "class")
+        rfcm <- confusionMatrix(rfpredict, validset$classe)
+        rfcm
+        
+# Plot confusion matrix results
+        plot(rfcm$table, main = paste("Random Forest Accuracy =", (100*round(rfcm$overall['Accuracy'], 4)),"%"))
+```
+
+####**Decision Tree**
+
+```{r decision tree}
+
+# Decision Tree model
+        dtmodel <- rpart(classe ~ ., data = trainset, method = "class")
+        dtmodel
+        
+# Predict against validation dataset
+        dtpredict <- predict(dtmodel, validset, type = "class")
+        dtcm <- confusionMatrix(dtpredict, validset$classe)
+        dtcm
+        
+# Plot confusion matrix results
+        plot(dtcm$table, main = paste("Decision Tree Accuracy =", (100*round(dtcm$overall['Accuracy'], 4)),"%"))
+```
+
+####**Generalised Boosting Model**
+
+```{r generalised boosting model}
+
+# Generalised Boosting Model
+        gbcontrol <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+        gbmodel <- train(classe ~ ., data = trainset, method = "gbm", trControl = gbcontrol, verbose = FALSE)
+        gbmodel
+
+# Predict against validation dataset
+        gbpredict <- predict(gbmodel, validset, type = "raw")
+        gbcm <- confusionMatrix(gbpredict, validset$classe)
+        gbcm
+        
+# Plot confusion matrix results
+        plot(gbcm$table, main = paste("Generalised Boosted Model Accuracy =", (100*round(gbcm$overall['Accuracy'], 4)),"%"))
+```
+
+###**Findings**
+
+The **Confusion Matrix** cross-validates what the prediction model (developed from the training dataset) predicted in the validation dataset (Prediction), against the values that were actually in the validation dataset (Reference). For example, if the prediction model predicted 1,677 samples in the validation dataset in Class A (correct weightlifting technique), and the validation dataset actually had 1,672 samples in Class A, then the corss-validation indicates that the prediction model had a high rate of predictive accuracy.
+
+Out of sample error rates are measured by calculating **1 minus the Accuracy figure** that was calculated when validating the prediction model developed from the training dataset against the validation dataset.
+
+The **Random Forest** prediction model has an accuracy rate of **`r (100*(round(rfcm$overall['Accuracy'], 4)))`%**, so the out of sample error rate is **`r (100*(1-(round(rfcm$overall['Accuracy'], 4))))`%**.
+
+The **Decision Tree** prediction model has an accuracy rate of **`r (100*(round(dtcm$overall['Accuracy'], 4)))`%**, so the out of sample error rate is **`r (100*(1-(round(dtcm$overall['Accuracy'], 4))))`%**.
+
+The **Generalised Boosted Model** prediction model has an accuracy rate of **`r (100*(round(gbcm$overall['Accuracy'], 4)))`%**, so the out of sample error rate is **`r (100*(1-(round(gbcm$overall['Accuracy'], 4))))`%**.
+
+On this basis, the **Random Forest** prediction model shall be selected to be applied to the twenty observations in the training dataset.
+
+###**Conclusion**
+
+This section shall apply the **Random Forest** prediction model to the testing dataset to predict a new **testing$classe_rf** variable for each of the twenty observations in the testing dataset.
+
+```{r random forest test prediction}
+
+#Predict against test dataset
+        testing$classe_rf <- predict(rfmodel, testing, type = "class")
+        testing$classe_rf
+```
+
+As the accuracy of the **Generalised Boosting** prediction model was close to that of the **Random Forest** prediction model, it is worth applying the **Generalised Boosting** prediction model to the testing dataset to predict a new **testing$classe_gbm** variable for each of the twenty observations in the testing dataset. The values for this variable for at least nineteen of the twenty observations in the testing dataset should be the same as those predicted by the **Random Forest** prediction model.
+
+```{r generalised boosting model test prediction}
+
+#Predict against test dataset
+        testing$classe_gbm <- predict(gbmodel, testing, type = "raw")
+        testing$classe_gbm
+```
+
+###**Software versions used**
+
+```{r software versions}
+# print relevant software and versions
+        sessionInfo()
+```
+
