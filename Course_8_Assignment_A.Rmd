@@ -54,7 +54,10 @@ The following block of R code shall:
 # Load required data
         training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
         testing <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
-        
+
+# Make copy of testing dataset - keep original testing dataset unchanged
+        testcopy <- testing
+
 # Partition training dataset into a 70:30 training:validation dataset
         inTrain  <- createDataPartition(training$classe, p = 0.7, list = FALSE)
         trainset <- training[inTrain, ]
@@ -151,28 +154,33 @@ On this basis, the **Random Forest** prediction model shall be selected to be ap
 
 ###**Conclusion**
 
-This section shall apply the **Random Forest** prediction model to the testing dataset to predict a new **testing$classe_rf** variable for each of the twenty observations in the testing dataset.
+This section shall apply the **Random Forest** prediction model to a copy of the original testing dataset to predict a new **testcopy$classe_rf** variable for each of the twenty observations in the testing dataset.
 
-```{r random forest test prediction}
+As the accuracy of the **Generalised Boosting** prediction model was close to that of the **Random Forest** prediction model, it is worth applying the **Generalised Boosting** prediction model to another copy of the original testing dataset to predict a new **testcopy2$classe_gbm** variable for each of the twenty observations in the testing dataset. The values for this variable for at least nineteen of the twenty observations in the testing dataset should be the same as those predicted by the **Random Forest** prediction model.
 
-#Predict against test dataset
-        testing$classe_rf <- predict(rfmodel, testing, type = "class")
-        testing$classe_rf
+```{r run prediction models against testing data}
+
+# Run Random Forest prediction against test dataset
+        testcopy$classe_rf <- predict(rfmodel, testcopy, type = "class")
+
+# Make another copy of the original testing dataset
+        testcopy2 <- testing
+
+# Run Generalised Boosting Model prediction against copy of test dataset
+        testcopy2$classe_gbm <- predict(gbmodel, testcopy2, type = "raw")
 ```
 
-As the accuracy of the **Generalised Boosting** prediction model was close to that of the **Random Forest** prediction model, it is worth applying the **Generalised Boosting** prediction model to the testing dataset to predict a new **testing$classe_gbm** variable for each of the twenty observations in the testing dataset. The values for this variable for at least nineteen of the twenty observations in the testing dataset should be the same as those predicted by the **Random Forest** prediction model.
+```{r compare predictions against testing data}
 
-```{r generalised boosting model test prediction}
-
-#Predict against test dataset
-        testing$classe_gbm <- predict(gbmodel, testing, type = "raw")
-        testing$classe_gbm
+# Create data frame to compare RF test against GBM test
+        comparison <- data.frame("Random Forest" = testcopy$classe_rf, "Generalised Boosting Model" = testcopy2$classe_gbm)
+        comparison
 ```
 
 ###**Software versions used**
 
 ```{r software versions}
-# print relevant software and versions
+# Print relevant software and versions
         sessionInfo()
 ```
 
